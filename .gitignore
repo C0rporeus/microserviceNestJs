@@ -1,7 +1,12 @@
 # compiled output
 /dist
 /node_modules
+
+# terraform files
 /.terraform
+terraform.tfstate
+terraform.tfstate.backup
+*.tfvars
 
 # Logs
 logs
@@ -27,6 +32,9 @@ lerna-debug.log*
 *.launch
 .settings/
 *.sublime-workspace
+
+# scripts
+update-task-definition.sh
 
 # IDE - VSCode
 .vscode/*
