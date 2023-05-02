@@ -2,6 +2,10 @@ name: CI/CD Pipeline
 
 on: [push]
 
+env:
+  NODE_VERSION: 16.x
+  TERRAFORM_VERSION: 1.4.2
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -12,13 +16,25 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: 16.x
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+
+      - name: Cache Node.js modules
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: ${{ runner.os }}-yarn-
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
       - name: Run tests
         run: yarn run test
+
   build:
     runs-on: ubuntu-latest
     needs: test
@@ -29,7 +45,18 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: 16.x
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+
+      - name: Cache Node.js modules
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: ${{ runner.os }}-yarn-
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
@@ -50,35 +77,27 @@ jobs:
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
-
         with:
           context: .
           platforms: linux/amd64
           push: true
           file: ./Dockerfile
           tags: ${{ steps.login-ecr.outputs.registry }}/dev-ops-neoris:${{ github.sha }}
+
   deploy:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     needs: build
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
+        uses: aws-actions/configure-aws
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v1
         with:
-          terraform_version: 1.0.0
-      
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
       - name: Checkout code
         uses: actions/checkout@v2
-
-      - name: Show directory content
-        run: ls -la
 
       - name: Replace image tag in task definition
         run: sed -i 's/${TAG}/${{ github.sha }}/g' ./ecs_task_definition.json
