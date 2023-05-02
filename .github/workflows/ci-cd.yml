@@ -75,9 +75,9 @@ jobs:
           terraform_version: 1.0.0
       - name: Check place workdir
         run: pwd && ls -la
-        
+
       - name: Replace image tag in task definition
-        run: sed -i 's/${TAG}/${{ github.sha }}/g' ./.github/workflows/ecs_task_definition.json
+        run: sed -i 's/${TAG}/${{ github.sha }}/g' /home/runner/work/microserviceNestJs/microserviceNestJs/.github/workflows/ecs_task_definition.json
 
       - name: Initialize Terraform
         run: terraform init
