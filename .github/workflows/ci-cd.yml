@@ -73,7 +73,9 @@ jobs:
         uses: hashicorp/setup-terraform@v1
         with:
           terraform_version: 1.0.0
-
+      - name: Check place workdir
+        run: pwd && ls -la
+        
       - name: Replace image tag in task definition
         run: sed -i 's/${TAG}/${{ github.sha }}/g' ./.github/workflows/ecs_task_definition.json
 
