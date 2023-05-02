@@ -1,0 +1,25 @@
+{
+  "family": "dev-ops-neoris",
+  "containerDefinitions": [
+    {
+      "name": "nestjs-app",
+      "image": "303638556798.dkr.ecr.us-east-1.amazonaws.com/dev-ops-neoris:${TAG}",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 3000,
+          "hostPort": 3000
+        }
+      ],
+      "memory": 300,
+      "cpu": 256
+    }
+  ],
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "networkMode": "awsvpc",
+  "executionRoleArn": "arn:aws:iam::your-account-id:role/your-ecs-execution-role",
+  "cpu": "256",
+  "memory": "512"
+}
