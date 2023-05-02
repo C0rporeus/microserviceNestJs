@@ -21,6 +21,7 @@ jobs:
         run: yarn run test
   build:
     runs-on: ubuntu-latest
+    needs: test
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -59,7 +60,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    needs: build_and_test
+    needs: build
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
