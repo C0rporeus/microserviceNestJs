@@ -52,6 +52,15 @@ resource "aws_security_group" "allow_http" {
   }
 }
 
+resource "aws_eip" "nat" {
+  vpc = true
+}
+
+resource "aws_nat_gateway" "main" {
+  allocation_id = aws_eip.nat.id
+  subnet_id     = aws_subnet.public[0].id
+}
+
 resource "aws_iam_role" "ecs_execution_role" {
   name = "ecs_execution_role"
 
@@ -161,6 +170,15 @@ resource "aws_route_table" "public" {
   }
 }
 
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.main.id
+  }
+}
+
 resource "aws_route_table_association" "public_az1" {
   subnet_id      = aws_subnet.private.id
   route_table_id = aws_route_table.public.id
@@ -198,8 +216,6 @@ resource "aws_ecs_service" "nestjs" {
       aws_subnet.private.id,
       aws_subnet.private_2.id,
     ]
-
-    assign_public_ip = true
   }
 
   load_balancer {
@@ -208,3 +224,5 @@ resource "aws_ecs_service" "nestjs" {
     container_port   = 3000
   }
 }
+
+
