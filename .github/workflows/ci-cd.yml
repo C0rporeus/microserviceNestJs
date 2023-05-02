@@ -12,7 +12,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: 14
+          node-version: 16.x
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
@@ -26,13 +26,17 @@ jobs:
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
+        with:
+          region: us-east-1
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
+
         with:
           context: .
           platforms: linux/amd64
           push: true
+          file: ./Dockerfile
           tags: ${{ steps.login-ecr.outputs.registry }}/dev-ops-neoris:${{ github.sha }}
 
   deploy:
