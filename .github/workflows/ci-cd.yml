@@ -75,7 +75,7 @@ jobs:
           terraform_version: 1.0.0
 
       - name: Replace image tag in task definition
-        run: sed -i 's/${TAG}/${{ github.sha }}/g' ./ecs_task_definition.json
+        run: sed -i 's/${TAG}/${{ github.sha }}/g' ./.github/workflows/ecs_task_definition.json
 
       - name: Initialize Terraform
         run: terraform init
