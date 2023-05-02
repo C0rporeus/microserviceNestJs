@@ -52,6 +52,19 @@ resource "aws_security_group" "allow_http" {
   }
 }
 
+resource "aws_security_group" "allow_outbound" {
+  name        = "allow_outbound"
+  description = "Allow outbound traffic"
+  vpc_id      = aws_vpc.main.id
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
 resource "aws_eip" "nat" {
   vpc = true
 }
@@ -170,6 +183,16 @@ resource "aws_route_table" "public" {
   }
 }
 
+resource "aws_route_table_association" "public_az1" {
+  subnet_id      = aws_subnet.public[0].id
+  route_table_id = aws_route_table.public.id
+}
+
+resource "aws_route_table_association" "public_az2" {
+  subnet_id      = aws_subnet.public[1].id
+  route_table_id = aws_route_table.public.id
+}
+
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
 
@@ -177,16 +200,6 @@ resource "aws_route_table" "private" {
     cidr_block     = "0.0.0.0/0"
     nat_gateway_id = aws_nat_gateway.main.id
   }
-}
-
-resource "aws_route_table_association" "public_az1" {
-  subnet_id      = aws_subnet.private.id
-  route_table_id = aws_route_table.public.id
-}
-
-resource "aws_route_table_association" "public_az2" {
-  subnet_id      = aws_subnet.private_2.id
-  route_table_id = aws_route_table.public.id
 }
 
 resource "aws_ecs_cluster" "main" {
@@ -216,6 +229,7 @@ resource "aws_ecs_service" "nestjs" {
       aws_subnet.private.id,
       aws_subnet.private_2.id,
     ]
+    security_groups = [aws_security_group.allow_outbound.id]
   }
 
   load_balancer {
@@ -225,4 +239,56 @@ resource "aws_ecs_service" "nestjs" {
   }
 }
 
+resource "aws_iam_role" "vpc_flow_log_role" {
+  name = "vpc_flow_log_role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "vpc-flow-logs.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "vpc_flow_log_policy" {
+  name = "vpc_flow_log_policy"
+  role = aws_iam_role.vpc_flow_log_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams"
+        ]
+        Effect   = "Allow"
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+
+resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
+  name              = "/aws/vpc/flow_logs"
+  retention_in_days = 5
+}
+
+resource "aws_flow_log" "private_flow_log" {
+  log_destination      = aws_cloudwatch_log_group.vpc_flow_logs.arn
+  log_destination_type = "cloud-watch-logs"
+  traffic_type         = "ALL"
+  vpc_id               = aws_vpc.main.id
+  iam_role_arn         = aws_iam_role.vpc_flow_log_role.arn
+}
 
