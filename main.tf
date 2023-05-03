@@ -2,6 +2,16 @@ provider "aws" {
   region = "us-east-1"
 }
 
+terraform {
+  backend "s3" {
+    bucket         = "state-remote-tf"
+    key            = "terraform.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "terraform_state_lock"
+    encrypt        = true
+  }
+}
+
 resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
   tags = {
@@ -372,6 +382,10 @@ resource "aws_iam_role_policy" "vpc_flow_log_policy" {
 resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
   name              = "/aws/vpc/flow_logs"
   retention_in_days = 5
+
+  tags = {
+    Name = "vpc_flow_logs"
+  }
 }
 
 resource "aws_flow_log" "private_flow_log" {
