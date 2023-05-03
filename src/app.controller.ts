@@ -16,6 +16,17 @@ import { AuthService } from './auth.service';
 export class AppController {
   private readonly apiKey = '2f5ae96c-b558-4c7b-a590-a501ae1c3f6c';
   constructor(private readonly authService: AuthService) {}
+
+  @Get('')
+  async root() {
+    return { status: 'UP' };
+  }
+
+  @Get('/health')
+  async health() {
+    return { status: 'UP' };
+  }
+
   @Get('/generate-token')
   async generateToken() {
     const user = { username: 'example_user', userId: 1 };

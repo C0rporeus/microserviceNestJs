@@ -31,8 +31,9 @@ resource "aws_subnet" "private_2" {
 resource "aws_subnet" "public" {
   count = 2
 
-  cidr_block = "10.0.${count.index + 1}.0/24"
-  vpc_id     = aws_vpc.main.id
+  cidr_block        = "10.0.${count.index + 1}.0/24"
+  vpc_id            = aws_vpc.main.id
+  availability_zone = "us-east-1${count.index == 0 ? "a" : "b"}"
 
   tags = {
     Name = "nestjs-public-subnet-${count.index + 1}"
@@ -50,9 +51,23 @@ resource "aws_security_group" "allow_http" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  ingress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
-resource "aws_security_group" "allow_outbound" {
+resource "aws_security_group" "allow_outbound_inbound" {
   name        = "allow_outbound"
   description = "Allow outbound traffic"
   vpc_id      = aws_vpc.main.id
@@ -91,7 +106,7 @@ resource "aws_vpc_endpoint" "ecr_api" {
   service_name      = "com.amazonaws.us-east-1.ecr.api"
   vpc_endpoint_type = "Interface"
 
-  security_group_ids = [aws_security_group.allow_outbound.id]
+  security_group_ids = [aws_security_group.allow_outbound_inbound.id]
 
   subnet_ids = [
     aws_subnet.private.id,
@@ -105,7 +120,7 @@ resource "aws_vpc_endpoint" "ecr_dkr" {
   service_name      = "com.amazonaws.us-east-1.ecr.dkr"
   vpc_endpoint_type = "Interface"
 
-  security_group_ids = [aws_security_group.allow_outbound.id]
+  security_group_ids = [aws_security_group.allow_outbound_inbound.id]
 
   subnet_ids = [
     aws_subnet.private.id,
@@ -167,8 +182,8 @@ resource "aws_alb" "main" {
   load_balancer_type = "application"
   security_groups    = [aws_security_group.allow_http.id]
   subnets = [
-    aws_subnet.private.id,
-    aws_subnet.private_2.id
+    aws_subnet.public[0].id,
+    aws_subnet.public[1].id
   ]
 }
 
@@ -304,7 +319,7 @@ resource "aws_ecs_service" "nestjs" {
       aws_subnet.private.id,
       aws_subnet.private_2.id,
     ]
-    security_groups = [aws_security_group.allow_outbound.id]
+    security_groups = [aws_security_group.allow_outbound_inbound.id]
   }
 
   load_balancer {
