@@ -63,6 +63,18 @@ resource "aws_security_group" "allow_outbound" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+  egress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
 resource "aws_eip" "nat" {
@@ -72,6 +84,34 @@ resource "aws_eip" "nat" {
 resource "aws_nat_gateway" "main" {
   allocation_id = aws_eip.nat.id
   subnet_id     = aws_subnet.public[0].id
+}
+
+resource "aws_vpc_endpoint" "ecr_api" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.us-east-1.ecr.api"
+  vpc_endpoint_type = "Interface"
+
+  security_group_ids = [aws_security_group.allow_outbound.id]
+
+  subnet_ids = [
+    aws_subnet.private.id,
+    aws_subnet.private_2.id,
+  ]
+
+}
+
+resource "aws_vpc_endpoint" "ecr_dkr" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.us-east-1.ecr.dkr"
+  vpc_endpoint_type = "Interface"
+
+  security_group_ids = [aws_security_group.allow_outbound.id]
+
+  subnet_ids = [
+    aws_subnet.private.id,
+    aws_subnet.private_2.id,
+  ]
+
 }
 
 resource "aws_iam_role" "ecs_execution_role" {
@@ -86,6 +126,31 @@ resource "aws_iam_role" "ecs_execution_role" {
         Principal = {
           Service = "ecs-tasks.amazonaws.com"
         }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "ecs_ecr_policy" {
+  name = "ecs_ecr_policy"
+  role = aws_iam_role.ecs_execution_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+          "ecr:DescribeRepositories",
+          "ecr:ListImages",
+          "ecr:DescribeImages",
+          "ecr:GetRepositoryPolicy"
+        ]
+        Resource = "*"
       }
     ]
   })
@@ -183,6 +248,15 @@ resource "aws_route_table" "public" {
   }
 }
 
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.main.id
+  }
+}
+
 resource "aws_route_table_association" "public_az1" {
   subnet_id      = aws_subnet.public[0].id
   route_table_id = aws_route_table.public.id
@@ -193,13 +267,14 @@ resource "aws_route_table_association" "public_az2" {
   route_table_id = aws_route_table.public.id
 }
 
-resource "aws_route_table" "private" {
-  vpc_id = aws_vpc.main.id
+resource "aws_route_table_association" "private_az1" {
+  subnet_id      = aws_subnet.private.id
+  route_table_id = aws_route_table.private.id
+}
 
-  route {
-    cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.main.id
-  }
+resource "aws_route_table_association" "private_az2" {
+  subnet_id      = aws_subnet.private_2.id
+  route_table_id = aws_route_table.private.id
 }
 
 resource "aws_ecs_cluster" "main" {

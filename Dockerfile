@@ -6,8 +6,10 @@ COPY package*.json ./
 
 RUN yarn install --production
 
+RUN yarn run build
+
 COPY . .
 
 EXPOSE 3000
 
-CMD ["npm", "run", "start:prod"]
+CMD ["yarn", "run", "start:prod"]

@@ -27,8 +27,16 @@ endpoint protected by a token, that received body whit json format and return a 
 
 ## CI/CD
 
-The goal of this part is to create a CI/CD pipeline using Jenkins. The pipeline should be triggered when a pull request is created and should be executed in a temporary environment. The pipeline should run the following steps:
+The goal of this part is to create a CI/CD pipeline using GitHub Actions. The pipeline should be triggered when a pull request is created and should be executed in environment AWS. The pipeline should run the following steps:
 
-1. Terraform plan
-2. Terraform apply
-3. Terraform destroy
+1. Unit test
+
+- Run unit test for the microservice with jest showint result in console.
+
+2. Build
+
+- Build the docker image for the microservice and push it to a docker registry AWS ECR.
+
+3. Deploy
+
+- Deploy the microservice in AWS using terraform.
