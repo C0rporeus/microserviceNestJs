@@ -16,6 +16,12 @@ Microservice based in nodejs -nestjs whit two endpoints:
 
 a simulated endpoint to generate a token (verb GET), this endpoint is not protected by any authentication method.
 
+request curl example:
+
+```
+curl --location --request GET 'http://nestjs-alb-543552772.us-east-1.elb.amazonaws.com/generate-token'
+```
+
 2. /DevOps
 
 endpoint protected by a token (verb POST), that received body whit json format and return a message: 
@@ -28,7 +34,7 @@ endpoint protected by a token (verb POST), that received body whit json format a
 request curl example:
 
 ```
-curl --location 'http://nestjs-alb-12264583.us-east-1.elb.amazonaws.com/DevOps' \
+curl --location 'http://nestjs-alb-543552772.us-east-1.elb.amazonaws.com/DevOps' \
 --header 'X-Parse-REST-API-Key: 2f5ae96c-b558-4c7b-a590-a501ae1c3f6c' \
 --header 'X-JWT-KWY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImV4YW1wbGVfdXNlciIsInN1YiI6MSwiaWF0IjoxNjgzMDk3MDQzLCJleHAiOjE2ODMwOTcxMDN9.tAyYbetvK7_cYTuo8Y7FMN5t7szL4Zu1hO9qyZWTzKE' \
 --header 'Content-Type: application/json' \
