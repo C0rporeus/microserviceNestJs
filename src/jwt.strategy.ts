@@ -11,6 +11,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       secretOrKey: '1927813982u13jjk12hk31jk',
     });
     console.log('JwtStrategy constructor');
+    // console.log('JwtStrategy constructor', super);
   }
 
   async validate(payload: any) {
